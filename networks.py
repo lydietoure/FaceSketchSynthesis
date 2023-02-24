@@ -6,48 +6,47 @@ import tensorflow.keras as keras
 from keras import backend, layers
 
 class Downsampling(layers.Layer):
-      """
-  Creates a convolution/deconvolution layer for a convolutional network
-  that has a Convolution2D/Conv2DTranspose Layer, Batch normalisation and an activation'
-  """
-  def __init__(self, filters, kernel, strides=2, padding='same', 
-               normalization_momentum:int=0.8, leaky_alpha=0.2, **kwargs):
-    super().__init__(**kwargs)
-    self.convolution = layers.Conv2D(filters=filters, kernel_size=kernel, strides=strides, padding=padding)
-    self.normalisation = None if normalization_momentum is None else layers.BatchNormalization(momentum=normalization_momentum)
-    self.activation = layers.LeakyReLU(alpha=leaky_alpha)
+    """
+    Creates a convolution/deconvolution layer for a convolutional network
+    that has a Convolution2D/Conv2DTranspose Layer, Batch normalisation and an activation'
+    """
+    def __init__(self, filters, kernel, strides=2, padding='same', normalization_momentum:int=0.8, leaky_alpha=0.2, **kwargs):
+        super().__init__(**kwargs)
+        self.convolution = layers.Conv2D(filters=filters, kernel_size=kernel, strides=strides, padding=padding)
+        self.normalisation = None if normalization_momentum is None else layers.BatchNormalization(momentum=normalization_momentum)
+        self.activation = layers.LeakyReLU(alpha=leaky_alpha)
 
-  def call(self, inputs):
-    x = self.convolution(inputs)
-    if self.normalisation:
-      x = self.normalisation(x)
-    x = self.activation(x)
-    return x
+    def call(self, inputs):
+        x = self.convolution(inputs)
+        if self.normalisation:
+            x = self.normalisation(x)
+        x = self.activation(x)
+        return x
 
-  def summarize(self, input_sz):
-    x = layers.Input(shape=input_sz, name='input')
-    Model(x, self.call(x), name=self.name).summary()
+    def summarize(self, input_sz):
+        x = layers.Input(shape=input_sz, name='input')
+        Model(x, self.call(x), name=self.name).summary()
 
 class Upsampling(layers.Layer):
-  """
-  Creates a convolution/deconvolution layer for a convolutional network
-  that has a Convolution2D/Conv2DTranspose Layer, Batch normalisation and an activation'
-  """
-  def __init__(self, filters, kernel=5, strides=2, padding='same', 
-               normalization_momentum:int=0.8, **kwargs):
-    super().__init__(**kwargs)
-    self.convolution = layers.Conv2DTranspose(filters=filters, kernel_size=kernel, strides=strides, padding=padding, activation='relu')
-    self.normalisation = None if momentum is None else layers.BatchNormalization(momentum=normalization_momentum)
+    """
+    Creates a convolution/deconvolution layer for a convolutional network
+    that has a Convolution2D/Conv2DTranspose Layer, Batch normalisation and an activation'
+    """
+    def __init__(self, filters, kernel=5, strides=2, padding='same', 
+                normalization_momentum:int=0.8, **kwargs):
+        super().__init__(**kwargs)
+        self.convolution = layers.Conv2DTranspose(filters=filters, kernel_size=kernel, strides=strides, padding=padding, activation='relu')
+        self.normalisation = None if normalization_momentum is None else layers.BatchNormalization(momentum=normalization_momentum)
 
-  def call(self, inputs):
-    x = self.convolution(inputs)
-    if self.normalisation:
-      x = self.normalisation(x)
-    return x
+    def call(self, inputs):
+        x = self.convolution(inputs)
+        if self.normalisation:
+            x = self.normalisation(x)
+        return x
 
-  def summarize(self, input_sz):
-    x = layers.Input(shape=input_sz, name='input')
-    Model(x, self.call(x), name=self.name).summary()
+    def summarize(self, input_sz):
+        x = layers.Input(shape=input_sz, name='input')
+        Model(x, self.call(x), name=self.name).summary()
 
 
 
@@ -78,7 +77,7 @@ class VariationalEncoder(layers.Layer):
 
     def call(self, inputs):
         x = self.subnet(inputs)
-        if flatten:
+        if self.flatten:
             x = layers.Flatten()(x)
         distribution_mean = self.dense_mean(x)
         distribution_variance = self.dense_log_var(x)
@@ -107,7 +106,7 @@ class VariationalDecoder(layers.Layer):
 
 class VariationalAutoencoder(keras.Model):
 
-    def __init__(self, encoder_sub, decoder_sub, latent_dim=32, intermediate_dim=(28, 28, 12), flatten=False):
+    def __init__(self, encoder_sub, decoder_sub, latent_dim=32, intermediate_dim=(28, 28, 12), flatten=False, **kwargs):
         """
         Params:
             - encoder_sub           :
