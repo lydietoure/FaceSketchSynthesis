@@ -10,8 +10,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Constants
+"""The size of the image once it is processed"""
 TARGET_SIZE = (128,128)
-IMG_DIM = (128,128,3)
+"""The standard dimension of the input, that is the target size with the channels"""
+IMG_DIM = (*TARGET_SIZE,3)
 
 def load_dataset(directory, target_size):
     """
