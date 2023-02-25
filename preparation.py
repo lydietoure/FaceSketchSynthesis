@@ -10,10 +10,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # Constants
-"""The size of the image once it is processed"""
-TARGET_SIZE = (128,128)
-"""The standard dimension of the input, that is the target size with the channels"""
-IMG_DIM = (*TARGET_SIZE,3)
+# """The size of the image once it is processed"""
+# TARGET_SIZE = (128,128)
+# """The standard dimension of the input, that is the target size with the channels"""
+# IMG_DIM = (*TARGET_SIZE,3)
 
 def load_dataset(directory, target_size):
     """
@@ -38,7 +38,7 @@ def load_dataset(directory, target_size):
 
 
 def plot_side_by_side(
-    original, reconstructions, target_size=TARGET_SIZE,  n=5, 
+    original, reconstructions, target_size,  n=5, 
     labels=('Original','Reconstructed'),colors=('green','blue')
 ):
     """
@@ -64,7 +64,7 @@ def plot_side_by_side(
     plt.show()
 
 
-def plot_synthesis(original, predicted, target, target_size=TARGET_SIZE, n=10):
+def plot_synthesis(original, predicted, target, target_size, n=10):
     """
     Plots the face-to-sketch/sketch-to-face.
     """
