@@ -143,7 +143,7 @@ class VariationalAutoencoder(Model):
         distribution as the prior distribution of the latent samples.
 
         Params:
-        - encoder: the recognition model which takes some input `x` and samples latent inputs `z` from the Gaussian prior.
+        - encoder: the recognition model which takes some input `x` and samples latent inputs `z` from the Gaussian prior. This model returns [z, mu, log_var]
         - decoder: the generative model, which generates an output `y` from a latent representation `z` coded by the recognition model
         - reconstruction_loss: the reconstruction loss function of the model, which measures the disparity between the observed and predicted outputs
         """
@@ -156,15 +156,11 @@ class VariationalAutoencoder(Model):
         )
         self.kl_loss_tracker = keras.metrics.Mean(name="kl_loss")
 
-        # Compilation parameters
-        self.loss_factor = 10000
-        self.reconstruction_loss_fn = keras.losses.mse
 
-    
-    def set_hyperparameters(self, recon_lossfn = keras.losses.mse, loss_factor=10000):
-      self.loss_factor = 10000
-      self.reconstruction_loss_fn = recon_lossfn
-      
+    def compile(self, optimizer, reconstruction_lossfn = keras.losses.mse ):
+        super().compile()
+        self.reconstruction_loss_fn = reconstruction_lossfn
+        self.optimizer = optimizer
       
     @property
     def metrics(self):
@@ -187,13 +183,9 @@ class VariationalAutoencoder(Model):
             z, z_mean, z_log_var = self.encoder(data[0])
             reconstruction = self.decoder(z)
             reconstruction_loss = tf.reduce_mean(self.reconstruction_loss_fn(data[1], reconstruction), axis=(1, 2))
-            #     tf.reduce_sum( 
-            #     )
-            # )
             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
-            # kl_loss = tf.reduce_mean(tf.reduce_sum(kl_loss, axis=1))
             kl_loss = tf.reduce_mean(kl_loss)
-            total_loss = reconstruction_loss*self.loss_factor + kl_loss
+            total_loss = reconstruction_loss + kl_loss
         grads = tape.gradient(total_loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
         self.total_loss_tracker.update_state(total_loss)
