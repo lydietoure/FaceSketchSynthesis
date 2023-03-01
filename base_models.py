@@ -177,12 +177,12 @@ class VariationalAutoencoder(Model):
 
     def train_step(self, data):
 
-        # inputs, outputs = data
+        inputs, outputs = data
 
         with tf.GradientTape() as tape:
-            z, z_mean, z_log_var = self.encoder(data[0])
+            z, z_mean, z_log_var = self.encoder(inputs)
             reconstruction = self.decoder(z)
-            reconstruction_loss = tf.reduce_mean(self.reconstruction_loss_fn(data[1], reconstruction), axis=(1, 2))
+            reconstruction_loss = tf.reduce_mean(self.reconstruction_loss_fn(outputs, reconstruction), axis=(1, 2))
             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
             kl_loss = tf.reduce_mean(kl_loss)
             total_loss = reconstruction_loss + kl_loss
