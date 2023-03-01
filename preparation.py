@@ -15,9 +15,15 @@ import matplotlib.pyplot as plt
 # """The standard dimension of the input, that is the target size with the channels"""
 # IMG_DIM = (*TARGET_SIZE,3)
 
-def load_dataset(directory, target_size):
+def load_dataset(directory, target_size, target_range = 'sigmoid'):
     """
-    Loads a dataset from the given directory, and 
+    Loads a dataset from the given directory, and preprocesses it
+
+    Params:
+    - directory: the directory where the images are
+    - target_size: the size of the images to be loaded in
+    - target_range: the range of values of the image, one of `sigmoid` or `tanh`. If `tanh`, the values will be normalised to be in the (-1,1) range
+        otherwise, they will be re-scaled to the (0,1) interval. Defaults to `sigmoid`
     """
 
     # Get all the file names
@@ -28,7 +34,15 @@ def load_dataset(directory, target_size):
     for image_path in paths:
         image = keras.utils.load_img(image_path, color_mode='rgb', target_size=target_size)
         input_arr = keras.utils.img_to_array(image)
-        input_arr = input_arr.astype('float32') / 255.0
+        input_arr = input_arr.astype('float32') 
+
+        # Normalise to the appropriate range
+        if target_range == 'tanh':
+            input_arr = (input_arr / 255.0 - 0.5) * 2
+            input_arr = np.clip(input_arr, -1, 1)
+        else:
+            input_arr = input_arr / 255.0
+
         
         data_array.append(np.asarray(input_arr))
 

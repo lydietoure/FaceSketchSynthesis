@@ -106,7 +106,27 @@ def get_convolutional_decoder(intermediate_dim):
 
 
 class VariationalAutoencoder(Model):
+
     def __init__(self, encoder, decoder, **kwargs):
+        """"
+        Creates a variational autoencoder for real-valued inputs/outputs.
+    
+        A variational autoencoder is a semi-supervised learning model which describes
+        data generation through a probabilistic distribution of some latent (unobserved) samples 
+        conditioned on the observed input. 
+        It is composed of two subnetworks: a probabilistic encoder (called recognition model)
+        which approximates a posterior distribution of the latent space conditioned on the input,
+        and a probabilistic decoder (called generative model) learns the conditional distribution 
+        of the input conditioned on the latent samples. 
+
+        This variable autoencoder model assumes real-valued inputs, and uses the standard Gaussian
+        distribution as the prior distribution of the latent samples.
+
+        Params:
+        - encoder: the recognition model which takes some input `x` and samples latent inputs `z` from the Gaussian prior.
+        - decoder: the generative model, which generates an output `y` from a latent representation `z` coded by the recognition model
+        - reconstruction_loss: the reconstruction loss function of the model, which measures the disparity between the observed and predicted outputs
+        """
         super().__init__(**kwargs)
         self.encoder = encoder
         self.decoder = decoder
