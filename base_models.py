@@ -18,6 +18,7 @@ class Sampling(layers.Layer):
         latent_samples = distribution_mean + backend.exp(0.5 * distribution_variance) * random
         return latent_samples
 
+
 class ConvolutionSampling(layers.Layer):
     """
     A simple stack of two convolution layers, a max pooling save.
@@ -104,6 +105,25 @@ def get_convolutional_decoder(intermediate_dim):
     convolutional_decoder = Model(intermediate_x, decoded, name='convolutional_decoder')
     return convolutional_decoder
 
+
+def convolutionStack(
+    x: layers.Layer, filters, activation, kernel_size=3,
+    strides=1, padding='same', use_bias=True,
+    use_bn=False, use_drop=False, drop_value=0.3
+    ):
+    """
+    Creates a stack of Conv2D-BatchNormalisation-Activation-Dropout with the given parameters.
+    """
+
+    x = layers.Conv2D(
+        filters, kernel_size, strides=strides, padding=padding, use_bias=use_bias
+    )(x)
+    if use_bn:
+        x = layers.BatchNormalization()(x)
+    x = activation(x)
+    if use_drop:
+        x = layers.Dropout(drop_value)(x)
+    return x
 
 class VariationalAutoencoder(Model):
 
