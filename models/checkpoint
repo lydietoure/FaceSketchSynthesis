@@ -1,0 +1,2 @@
+model_checkpoint_path: "cwgan_cuhk_f2s_weights"
+all_model_checkpoint_paths: "cwgan_cuhk_f2s_weights"
