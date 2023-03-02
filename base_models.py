@@ -145,7 +145,6 @@ class VariationalAutoencoder(Model):
         Params:
         - encoder: the recognition model which takes some input `x` and samples latent inputs `z` from the Gaussian prior. This model returns [z, mu, log_var]
         - decoder: the generative model, which generates an output `y` from a latent representation `z` coded by the recognition model
-        - reconstruction_loss: the reconstruction loss function of the model, which measures the disparity between the observed and predicted outputs
         """
         super().__init__(**kwargs)
         self.encoder = encoder
@@ -157,10 +156,10 @@ class VariationalAutoencoder(Model):
         self.kl_loss_tracker = keras.metrics.Mean(name="kl_loss")
 
 
-    def compile(self, optimizer, reconstruction_lossfn = keras.losses.mse ):
-        super().compile()
-        self.reconstruction_loss_fn = reconstruction_lossfn
-        self.optimizer = optimizer
+    # def compile(self, optimizer, reconstruction_lossfn = keras.losses.mse ):
+    #     super().compile()
+    #     self.loss = reconstruction_lossfn
+    #     self.optimizer = optimizer
       
     @property
     def metrics(self):
@@ -182,7 +181,7 @@ class VariationalAutoencoder(Model):
         with tf.GradientTape() as tape:
             z, z_mean, z_log_var = self.encoder(inputs)
             reconstruction = self.decoder(z)
-            reconstruction_loss = tf.reduce_mean(self.reconstruction_loss_fn(outputs, reconstruction), axis=(1, 2))
+            reconstruction_loss = tf.reduce_mean(self.loss(outputs, reconstruction), axis=(1, 2))
             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
             kl_loss = tf.reduce_mean(kl_loss)
             total_loss = reconstruction_loss + kl_loss

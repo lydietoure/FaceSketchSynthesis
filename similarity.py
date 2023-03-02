@@ -2,13 +2,8 @@ from image_similarity_measures.quality_metrics import ssim, fsim, psnr
 from piq import FID
 from torch import from_numpy
 
-
 import tensorflow as tf
 import numpy as np
-
-
-
-
 
 
 
@@ -40,13 +35,16 @@ PRE_LOADED_MEASURES = {
     'ssim': ssim,
     'fsim': fsim,
     'fid': fid,
-    # 'scoot':scoot,
 }
 
 class Evaluator:
     """
     A class which evaluates a model with respect to a number of similarity measures
     """
+
+    def __init__(self, name):
+        self.name = name
+        self.results = {}
 
     def evaluate_model_on_batch(self, y_true, measure, model:tf.keras.Model):
         # self.model = model if self.model is None else self.model
@@ -55,11 +53,20 @@ class Evaluator:
         y_pred = model.predict(y_true)
         return self.evaluate_batch(y_true, y_pred, measure)
 
-    def evaluate_batch(self, y_true, y_pred, measure):
+    def evaluate_batch(self, y_true, y_pred, measure, record=True):
         """Evaluates a batch of data wrt a given similarity measure, and returns the mean value of the similarity indices"""
         
+        # assert len(y_t)
+
         if isinstance(measure, str):
             measure = PRE_LOADED_MEASURES[measure.lower()]
         
         similarity_values = [ measure(y_true[i], y_pred[i]) for i in range(len(y_true)) ]
-        return float(tf.reduce_mean(similarity_values))
+        similarity_aggregate = float(tf.reduce_mean(similarity_values))
+
+        if record:
+            measure_name = measure.__name__
+            self.results[measure_name] = similarity_aggregate
+
+        return similarity_aggregate
+     
