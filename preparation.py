@@ -55,7 +55,7 @@ def rescale(ls):
 
 
 def plot_side_by_side(
-    original, reconstructions, target_size,  n=5, 
+    original, reconstructions, target_size,  n=5, nb_channels=3,
     labels=('Original','Reconstructed'),colors=('green','blue'),
     resize_from_tanh=False,
 ):
@@ -72,7 +72,7 @@ def plot_side_by_side(
         # Display original
         ax = plt.subplot(2, n, i + 1)
         plt.title(labels[0],color=colors[0])
-        plt.imshow(original[i].reshape(*target_size,3))
+        plt.imshow(original[i].reshape(*target_size,nb_channels))
         #plt.gray()
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
@@ -80,14 +80,14 @@ def plot_side_by_side(
         # Display reconstruction
         ax = plt.subplot(2, n, i + 1 + n)
         plt.title(labels[1], color=colors[1])
-        plt.imshow(reconstructions[i].reshape(*target_size,3))
+        plt.imshow(reconstructions[i].reshape(*target_size,nb_channels))
         #plt.gray()
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
     plt.show()
 
 
-def plot_synthesis(original, predicted, target, target_size, n=10):
+def plot_synthesis(original, predicted, target, target_size, nb_channels=3, n=10):
     """
     Plots the face-to-sketch/sketch-to-face.
     """
@@ -97,7 +97,7 @@ def plot_synthesis(original, predicted, target, target_size, n=10):
         # Display original
         ax = plt.subplot(3, n, i + 1)
         plt.title('Original',color='black')
-        plt.imshow(original[i].reshape(*target_size,3))
+        plt.imshow(original[i].reshape(*target_size,nb_channels))
         #plt.gray()
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
