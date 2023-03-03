@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 # """The standard dimension of the input, that is the target size with the channels"""
 # IMG_DIM = (*TARGET_SIZE,3)
 
-def load_dataset(directory, target_size, target_range = 'sigmoid'):
+def load_dataset(directory, target_size, target_range = 'sigmoid', color_mode='rgb'):
     """
     Loads a dataset from the given directory, and preprocesses it
 
@@ -24,6 +24,7 @@ def load_dataset(directory, target_size, target_range = 'sigmoid'):
     - target_size: the size of the images to be loaded in
     - target_range: the range of values of the image, one of `sigmoid` or `tanh`. If `tanh`, the values will be normalised to be in the (-1,1) range
         otherwise, they will be re-scaled to the (0,1) interval. Defaults to `sigmoid`
+    - color_mode: the color mode (rbg or grayscale)
     """
 
     # Get all the file names
@@ -32,7 +33,7 @@ def load_dataset(directory, target_size, target_range = 'sigmoid'):
 
     data_array = []
     for image_path in paths:
-        image = keras.utils.load_img(image_path, color_mode='rgb', target_size=target_size)
+        image = keras.utils.load_img(image_path, color_mode=color_mode, target_size=target_size)
         input_arr = keras.utils.img_to_array(image)
         input_arr = input_arr.astype('float32') 
 
@@ -49,15 +50,23 @@ def load_dataset(directory, target_size, target_range = 'sigmoid'):
     data_array = np.asarray(data_array)
     return data_array
 
+def rescale(ls):
+    return [ (x * 0.5) + 0.5 for x in ls]
 
 
 def plot_side_by_side(
     original, reconstructions, target_size,  n=5, 
-    labels=('Original','Reconstructed'),colors=('green','blue')
+    labels=('Original','Reconstructed'),colors=('green','blue'),
+    resize_from_tanh=False,
 ):
     """
     Plots the predictions below to their original.
     """
+    if resize_from_tanh:
+        [original, reconstructions] = rescale([original, reconstructions])
+
+    # width = 2*n if 2*n*target_size[0] < 20*target_size[0] else 2*
+
     plt.figure(figsize=(2*n, 4))
     for i in range(n):
         # Display original

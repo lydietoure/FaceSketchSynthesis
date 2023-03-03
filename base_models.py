@@ -125,9 +125,10 @@ def convolutionStack(
         x = layers.Dropout(drop_value)(x)
     return x
 
-class VariationalAutoencoder(Model):
 
-    def __init__(self, encoder, decoder, **kwargs):
+class VariationalAutoencoder(Model):
+    
+    def __init__(self, encoder, decoder, latent_dim, reparametrized:bool=True, **kwargs):
         """"
         Creates a variational autoencoder for real-valued inputs/outputs.
     
@@ -141,25 +142,34 @@ class VariationalAutoencoder(Model):
 
         This variable autoencoder model assumes real-valued inputs, and uses the standard Gaussian
         distribution as the prior distribution of the latent samples.
+        The encoder to supply is required to have a Dense layer as final layer,
+        and the input layer of the decoder must 
 
         Params:
-        - encoder: the recognition model which takes some input `x` and samples latent inputs `z` from the Gaussian prior. This model returns [z, mu, log_var]
+        - encoder: the recognition model which takes some input `x` and encodes it 
         - decoder: the generative model, which generates an output `y` from a latent representation `z` coded by the recognition model
+        - latent_dim: the size of the latent dimension from which latent samples will be drawn
+        - reparametrized: whether the encoder also reparametrizes the latent samples. In that case, the encode outputs z,z_mean,z_log_var
         """
         super().__init__(**kwargs)
         self.encoder = encoder
         self.decoder = decoder
+        self.input_size = tf.shape(self.encoder.layers[0].output.shape[1:])
+        self.latent_dim = latent_dim
+        self.reparametrized = reparametrized
+
+        # Verify consistency
+        # decoder_output_size = tf.shape(self.decoder.layers[-1].output.shape[1:])
+        # decoder_input_size = tf.shape(self.decoder.layers[0].output.shape[1:])
+        # assert decoder_output_size == self.input_size, 'Inputs and output sizes not compatible'
+        # assert decoder_input_size == self.latent_dim, 'The dimension of the latent space is not compatible with the input of the decoder'
+
         self.total_loss_tracker = keras.metrics.Mean(name="total_loss")
         self.reconstruction_loss_tracker = keras.metrics.Mean(
             name="reconstruction_loss"
         )
         self.kl_loss_tracker = keras.metrics.Mean(name="kl_loss")
-
-
-    # def compile(self, optimizer, reconstruction_lossfn = keras.losses.mse ):
-    #     super().compile()
-    #     self.loss = reconstruction_lossfn
-    #     self.optimizer = optimizer
+        self.distribution = layers.Dense(latent_dim)
       
     @property
     def metrics(self):
@@ -169,17 +179,23 @@ class VariationalAutoencoder(Model):
             self.kl_loss_tracker,
         ]
 
+    def reparametrize(self,inputs):
+      distribution_mean, distribution_variance = inputs
+      batch_size = backend.shape(distribution_variance)[0]
+      random = backend.random_normal(shape=(batch_size, backend.shape(distribution_variance)[1]))
+      latent_samples = distribution_mean + backend.exp(0.5 * distribution_variance) * random
+      return latent_samples
+
     def call(self, inputs):
-      z, _, _ = self.encoder(inputs)
+      z,_,_ = self.encode(inputs)
       outputs = self.decoder(z)
       return outputs
 
     def train_step(self, data):
-
         inputs, outputs = data
 
         with tf.GradientTape() as tape:
-            z, z_mean, z_log_var = self.encoder(inputs)
+            z, z_mean, z_log_var = self.encode(inputs)
             reconstruction = self.decoder(z)
             reconstruction_loss = tf.reduce_mean(self.loss(outputs, reconstruction), axis=(1, 2))
             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
@@ -197,8 +213,97 @@ class VariationalAutoencoder(Model):
         }
 
     def encode(self, inputs):
-      z, _, _ = self.encoder(inputs)
-      return z
+        if self.reparametrized:
+            return self.encoder(inputs)
+        
+        flattened_encoding = self.encoder(inputs)
+        z_mu = self.distribution(flattened_encoding)
+        z_log_var = self.distribution(flattened_encoding)
+        z = self.reparametrize((z_mu, z_log_var))
+        return z, z_mu, z_log_var
+
+    def get_random_latent_vectors(self, batch_size):
+        z = tf.random.normal(shape=(batch_size, self.latent_dim))
+        return z
     
     def decode(self, latent_inputs):
-      return self.decoder(latent_inputs)
+        return self.decoder(latent_inputs)
+
+
+# class VariationalAutoencoder(Model):
+
+#     def __init__(self, encoder, decoder, **kwargs):
+#         """"
+#         Creates a variational autoencoder for real-valued inputs/outputs.
+    
+#         A variational autoencoder is a semi-supervised learning model which describes
+#         data generation through a probabilistic distribution of some latent (unobserved) samples 
+#         conditioned on the observed input. 
+#         It is composed of two subnetworks: a probabilistic encoder (called recognition model)
+#         which approximates a posterior distribution of the latent space conditioned on the input,
+#         and a probabilistic decoder (called generative model) learns the conditional distribution 
+#         of the input conditioned on the latent samples. 
+
+#         This variable autoencoder model assumes real-valued inputs, and uses the standard Gaussian
+#         distribution as the prior distribution of the latent samples.
+
+#         Params:
+#         - encoder: the recognition model which takes some input `x` and samples latent inputs `z` from the Gaussian prior. This model returns [z, mu, log_var]
+#         - decoder: the generative model, which generates an output `y` from a latent representation `z` coded by the recognition model
+#         """
+#         super().__init__(**kwargs)
+#         self.encoder = encoder
+#         self.decoder = decoder
+#         self.total_loss_tracker = keras.metrics.Mean(name="total_loss")
+#         self.reconstruction_loss_tracker = keras.metrics.Mean(
+#             name="reconstruction_loss"
+#         )
+#         self.kl_loss_tracker = keras.metrics.Mean(name="kl_loss")
+
+
+#     # def compile(self, optimizer, reconstruction_lossfn = keras.losses.mse ):
+#     #     super().compile()
+#     #     self.loss = reconstruction_lossfn
+#     #     self.optimizer = optimizer
+      
+#     @property
+#     def metrics(self):
+#         return [
+#             self.total_loss_tracker,
+#             self.reconstruction_loss_tracker,
+#             self.kl_loss_tracker,
+#         ]
+
+#     def call(self, inputs):
+#       z, _, _ = self.encoder(inputs)
+#       outputs = self.decoder(z)
+#       return outputs
+
+#     def train_step(self, data):
+
+#         inputs, outputs = data
+
+#         with tf.GradientTape() as tape:
+#             z, z_mean, z_log_var = self.encoder(inputs)
+#             reconstruction = self.decoder(z)
+#             reconstruction_loss = tf.reduce_mean(self.loss(outputs, reconstruction), axis=(1, 2))
+#             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
+#             kl_loss = tf.reduce_mean(kl_loss)
+#             total_loss = reconstruction_loss + kl_loss
+#         grads = tape.gradient(total_loss, self.trainable_weights)
+#         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
+#         self.total_loss_tracker.update_state(total_loss)
+#         self.reconstruction_loss_tracker.update_state(reconstruction_loss)
+#         self.kl_loss_tracker.update_state(kl_loss)
+#         return {
+#             "loss": self.total_loss_tracker.result(),
+#             "reconstruction_loss": self.reconstruction_loss_tracker.result(),
+#             "kl_loss": self.kl_loss_tracker.result(),
+#         }
+
+#     def encode(self, inputs):
+#       z, _, _ = self.encoder(inputs)
+#       return z
+    
+#     def decode(self, latent_inputs):
+#       return self.decoder(latent_inputs)

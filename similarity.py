@@ -1,6 +1,7 @@
 from image_similarity_measures.quality_metrics import ssim, fsim, psnr
 from piq import FID
 from torch import from_numpy
+from keras.losses import mse
 
 import tensorflow as tf
 import numpy as np
@@ -35,6 +36,7 @@ PRE_LOADED_MEASURES = {
     'ssim': ssim,
     'fsim': fsim,
     'fid': fid,
+    'mse': mse
 }
 
 class Evaluator:
