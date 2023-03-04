@@ -44,7 +44,7 @@ class Evaluator:
     A class which evaluates a model with respect to a number of similarity measures
     """
 
-    def __init__(self, name):
+    def __init__(self, name=None):
         self.name = name
         self.results = {}
 
@@ -71,4 +71,12 @@ class Evaluator:
             self.results[measure_name] = similarity_aggregate
 
         return similarity_aggregate
+    
+    def evaluate_batch_on_all(self, y_true, y_pred, record=True):
+        results = {}
+        for measure_name in PRE_LOADED_MEASURES:
+            measure_fn = PRE_LOADED_MEASURES[measure_name]
+            results[measure_name] = self.evaluate_batch(y_true, y_pred, measure_fn, record)
+        return results
+            
      

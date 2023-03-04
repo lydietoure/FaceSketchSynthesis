@@ -120,3 +120,18 @@ def plot_synthesis(original, predicted, target, target_size, nb_channels=3, n=10
 
     plt.show()
 
+
+def plot_results(results):
+    """
+    Plots a dictionary in a table
+    """
+    data = list(zip(results.keys(), results.values()))
+
+    _, ax = plt.subplots()
+    table = ax.table(cellText=data, loc='left', cellLoc='left')
+    
+    table.set_fontsize(12)
+    table.scale(1,4)
+    ax.axis('off')
+
+    plt.show()

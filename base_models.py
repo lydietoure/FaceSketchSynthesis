@@ -5,6 +5,7 @@ Architectures for the base models that are going to be used in the project.
 import tensorflow as tf
 from tensorflow import keras
 from keras import layers, Model, backend
+import similarity
 
 
 class Sampling(layers.Layer):
@@ -125,8 +126,52 @@ def convolutionStack(
         x = layers.Dropout(drop_value)(x)
     return x
 
+class Autoencoder(Model):
+    def __init__(self, encoder, decoder, latent_dim=None, **kwargs):
+        super().__init__(**kwargs)
+        self.encoder = encoder
+        self.decoder = decoder
+        self.latent_dim = latent_dim if latent_dim else tuple(self.encoder.layers[-1].output.shape[1:])
+        self.input_size = tf.shape(self.encoder.layers[0].output.shape[1:])
 
-class VariationalAutoencoder(Model):
+    def call(self, inputs):
+        return self.decoder(self.encoder(inputs))
+
+
+
+def get_autoencoder(input_shape, model_name:str = 'autoencoder'):
+    """
+    A simple convolutional autoencoder.
+    """
+    # Inputs
+    input_img = layers.Input(shape=input_shape, name='input_image')
+
+    # Encoder
+    x = convolutionStack(input_img, 32, activation=layers.LeakyReLU(0.2), 
+            kernel_size=3, use_bn=False, strides=2)
+    x = convolutionStack(x, 32, activation=layers.LeakyReLU(0.2), 
+            kernel_size=3, use_bn=False, strides=1)
+    latent_inputs = convolutionStack(x, 16, activation=layers.LeakyReLU(0.2), 
+            kernel_size=3, strides=2)
+    encoder = Model(x, latent_inputs)
+    latent_inputs_shape = latent_inputs.shape[1:]
+
+    # Decoder
+    latent_x = layers.Input(shape=latent_inputs_shape)
+    x = layers.UpSampling2D(size=2, interpolation='bilinear')(latent_x)
+    x = convolutionStack(x, 32, activation=layers.LeakyReLU(0.2), 
+            kernel_size=3, use_bn=False, strides=1)
+    x = convolutionStack(x, 16, activation=layers.LeakyReLU(0.2), 
+            kernel_size=3, use_bn=True, strides=1)
+    x = layers.UpSampling2D(size=2, interpolation='lanczos5')(x)
+    x = layers.Conv2D(3, kernel_size=3, strides=1, padding='same', 
+            activation='sigmoid', name='decoded_output')(x)
+    decoder = Model(latent_x, x)
+    
+    autoencoder = Autoencoder(encoder, decoder, latent_inputs_shape, name=model_name)
+    return autoencoder
+
+class VariationalAutoencoder(Autoencoder):
     
     def __init__(self, encoder, decoder, latent_dim, reparametrized:bool=True, **kwargs):
         """"
@@ -151,11 +196,11 @@ class VariationalAutoencoder(Model):
         - latent_dim: the size of the latent dimension from which latent samples will be drawn
         - reparametrized: whether the encoder also reparametrizes the latent samples. In that case, the encode outputs z,z_mean,z_log_var
         """
-        super().__init__(**kwargs)
-        self.encoder = encoder
-        self.decoder = decoder
+        super().__init__(encoder, decoder, latent_dim, **kwargs)
+        # self.encoder = encoder
+        # self.decoder = decoder
         self.input_size = tf.shape(self.encoder.layers[0].output.shape[1:])
-        self.latent_dim = latent_dim
+        # self.latent_dim = latent_dim
         self.reparametrized = reparametrized
 
         # Verify consistency
@@ -229,81 +274,9 @@ class VariationalAutoencoder(Model):
     def decode(self, latent_inputs):
         return self.decoder(latent_inputs)
 
-
-# class VariationalAutoencoder(Model):
-
-#     def __init__(self, encoder, decoder, **kwargs):
-#         """"
-#         Creates a variational autoencoder for real-valued inputs/outputs.
+class SuperModel:
     
-#         A variational autoencoder is a semi-supervised learning model which describes
-#         data generation through a probabilistic distribution of some latent (unobserved) samples 
-#         conditioned on the observed input. 
-#         It is composed of two subnetworks: a probabilistic encoder (called recognition model)
-#         which approximates a posterior distribution of the latent space conditioned on the input,
-#         and a probabilistic decoder (called generative model) learns the conditional distribution 
-#         of the input conditioned on the latent samples. 
-
-#         This variable autoencoder model assumes real-valued inputs, and uses the standard Gaussian
-#         distribution as the prior distribution of the latent samples.
-
-#         Params:
-#         - encoder: the recognition model which takes some input `x` and samples latent inputs `z` from the Gaussian prior. This model returns [z, mu, log_var]
-#         - decoder: the generative model, which generates an output `y` from a latent representation `z` coded by the recognition model
-#         """
-#         super().__init__(**kwargs)
-#         self.encoder = encoder
-#         self.decoder = decoder
-#         self.total_loss_tracker = keras.metrics.Mean(name="total_loss")
-#         self.reconstruction_loss_tracker = keras.metrics.Mean(
-#             name="reconstruction_loss"
-#         )
-#         self.kl_loss_tracker = keras.metrics.Mean(name="kl_loss")
-
-
-#     # def compile(self, optimizer, reconstruction_lossfn = keras.losses.mse ):
-#     #     super().compile()
-#     #     self.loss = reconstruction_lossfn
-#     #     self.optimizer = optimizer
-      
-#     @property
-#     def metrics(self):
-#         return [
-#             self.total_loss_tracker,
-#             self.reconstruction_loss_tracker,
-#             self.kl_loss_tracker,
-#         ]
-
-#     def call(self, inputs):
-#       z, _, _ = self.encoder(inputs)
-#       outputs = self.decoder(z)
-#       return outputs
-
-#     def train_step(self, data):
-
-#         inputs, outputs = data
-
-#         with tf.GradientTape() as tape:
-#             z, z_mean, z_log_var = self.encoder(inputs)
-#             reconstruction = self.decoder(z)
-#             reconstruction_loss = tf.reduce_mean(self.loss(outputs, reconstruction), axis=(1, 2))
-#             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
-#             kl_loss = tf.reduce_mean(kl_loss)
-#             total_loss = reconstruction_loss + kl_loss
-#         grads = tape.gradient(total_loss, self.trainable_weights)
-#         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
-#         self.total_loss_tracker.update_state(total_loss)
-#         self.reconstruction_loss_tracker.update_state(reconstruction_loss)
-#         self.kl_loss_tracker.update_state(kl_loss)
-#         return {
-#             "loss": self.total_loss_tracker.result(),
-#             "reconstruction_loss": self.reconstruction_loss_tracker.result(),
-#             "kl_loss": self.kl_loss_tracker.result(),
-#         }
-
-#     def encode(self, inputs):
-#       z, _, _ = self.encoder(inputs)
-#       return z
-    
-#     def decode(self, latent_inputs):
-#       return self.decoder(latent_inputs)
+    def __init__(self, model:Model=None, model_name:str=None):
+        self.model = model
+        self.model_name = model_name
+        self.evaluator = similarity.Evaluator(self.model.name)
