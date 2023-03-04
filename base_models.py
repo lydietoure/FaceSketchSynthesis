@@ -273,10 +273,3 @@ class VariationalAutoencoder(Autoencoder):
     
     def decode(self, latent_inputs):
         return self.decoder(latent_inputs)
-
-class SuperModel:
-    
-    def __init__(self, model:Model=None, model_name:str=None):
-        self.model = model
-        self.model_name = model_name
-        self.evaluator = similarity.Evaluator(self.model.name)
