@@ -5,7 +5,6 @@ Architectures for the base models that are going to be used in the project.
 import tensorflow as tf
 from tensorflow import keras
 from keras import layers, Model, backend
-import similarity
 
 
 class Sampling(layers.Layer):
