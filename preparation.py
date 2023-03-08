@@ -113,22 +113,22 @@ def plot_side_by_side(
         original = rescale_images(original, source_range, target_range)
         reconstructions = rescale_images(reconstructions, source_range, target_range)
 
-    original = original.reshape(*target_size, nb_channels)
-    reconstructions = reconstructions.reshape(*target_size, nb_channels)
+    # original = original.reshape(*target_size, nb_channels)
+    # reconstructions = reconstructions.reshape(*target_size, nb_channels)
 
     plt.figure(figsize=(2*n, 4))
     for i in range(n):
         # Display original
         ax = plt.subplot(2, n, i + 1)
         plt.title(labels[0],color=colors[0])
-        plt.imshow(original[i])
+        plt.imshow(original[i].reshape(*target_size, nb_channels))
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
 
         # Display reconstruction
         ax = plt.subplot(2, n, i + 1 + n)
         plt.title(labels[1], color=colors[1])
-        plt.imshow(reconstructions[i])
+        plt.imshow(reconstructions[i].reshape(*target_size, nb_channels))
         #plt.gray()
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
@@ -148,9 +148,6 @@ def plot_synthesis(original, predicted, target, target_size, nb_channels=3, n=5,
         predicted = rescale_images(predicted, source_range, target_range)
         target = rescale_images(target, source_range, target_range)
 
-    original = original.reshape(*target_size, nb_channels)
-    predicted = predicted.reshape(*target_size, nb_channels)
-    target = target.reshape(*target_size, nb_channels)
 
     plt.figure(figsize=(2*n, 6))
     # plt.title(title, fontsize=15)
@@ -158,21 +155,21 @@ def plot_synthesis(original, predicted, target, target_size, nb_channels=3, n=5,
         # Display original
         ax = plt.subplot(3, n, i + 1)
         plt.title(labels[0],color='black')
-        plt.imshow(original[i])
+        plt.imshow(original[i].reshape(*target_size, nb_channels))
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
 
         # Display predictions
         ax = plt.subplot(3, n, i + 1 + n)
         plt.title(labels[1],color='blue')
-        plt.imshow(predicted[i])
+        plt.imshow(predicted[i].reshape(*target_size, nb_channels))
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
 
         # Display target 
         ax = plt.subplot(3, n, i+1+2*n)
         plt.title(labels[2],color='green')
-        plt.imshow(target[i])
+        plt.imshow(target[i].reshape(*target_size, nb_channels))
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
 
