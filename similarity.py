@@ -1,7 +1,7 @@
 from image_similarity_measures.quality_metrics import ssim, fsim, psnr
 from piq import FID
 from torch import from_numpy
-from keras.losses import mse
+from keras import losses
 
 import tensorflow as tf
 import numpy as np
@@ -32,13 +32,19 @@ def fid(y_true, y_pred):
 def lpips(y_true, y_pred):
     pass
 
+def mse(y_true, y_pred):
+    return losses.mse(y_true, y_pred)
+
+def mae(y_true, y_pred):
+    return losses.mae(y_true, y_pred)
 
 PRE_LOADED_MEASURES = {
     'psnr': psnr,
     'ssim': ssim,
     'fsim': fsim,
     'fid': fid,
-    'mse': mse
+    'mse': mse,
+    'mae': mae,
 }
 
 class Evaluator:
