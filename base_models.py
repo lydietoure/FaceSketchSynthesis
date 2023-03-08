@@ -19,6 +19,20 @@ class Sampling(layers.Layer):
         return latent_samples
 
 
+class SSIMLoss(keras.losses.Loss):
+    """
+    SSIM Loss as implemented in Toledo and Antonelo:
+    https://github.com/tldrafael/FaceReconstructionWithVAEAndFaceMasks
+    """
+    def __init__(self):
+        super(SSIMLoss, self).__init__(name='ssim')
+
+    def __call__(self, y_e, y_pred, sample_weight=None):
+        loss_ssim = 1 - tf.image.ssim(y_e, y_pred, 1., filter_size=100)
+        # loss_ssim = tf.math.reduce_mean(loss_ssim)
+        return tf.math.reduce_mean(loss_ssim)
+
+
 class ConvolutionSampling(layers.Layer):
     """
     A simple stack of two convolution layers, a max pooling save.
@@ -107,17 +121,24 @@ def get_convolutional_decoder(intermediate_dim):
 
 
 def convolutionStack(
-    x: layers.Layer, filters, activation, kernel_size=3,
-    strides=1, padding='same', use_bias=True,
-    use_bn=False, use_drop=False, drop_value=0.3
+    x: layers.Layer, filters, kernel_size=3, activation=None,
+    strides=1, padding='same', use_bias=True, k_initializer='glorot_uniform',
+    use_bn=False, use_drop=False, drop_value=0.3, upsampling=False,
     ):
     """
     Creates a stack of Conv2D-BatchNormalisation-Activation-Dropout with the given parameters.
     """
 
-    x = layers.Conv2D(
-        filters, kernel_size, strides=strides, padding=padding, use_bias=use_bias
-    )(x)
+    if upsampling:
+        x = layers.Conv2DTranspose(
+            filters, kernel_size, strides=strides, padding=padding, use_bias=use_bias, 
+            kernel_initializer=k_initializer
+        )(x)
+    else:
+        x = layers.Conv2D(
+            filters, kernel_size, strides=strides, padding=padding, use_bias=use_bias, 
+            kernel_initializer=k_initializer
+        )(x)
     if use_bn:
         x = layers.BatchNormalization()(x)
     x = activation(x)
@@ -223,6 +244,12 @@ class VariationalAutoencoder(Autoencoder):
             self.kl_loss_tracker,
         ]
 
+
+    def compile(self, rec_loss_factor=10, kl_loss_factor=1, **kwargs):
+        super(VariationalAutoencoder, self).compile(**kwargs)
+        self.reconstruction_loss_factor = rec_loss_factor
+        self.kl_loss_factor = kl_loss_factor
+
     def reparametrize(self,inputs):
       distribution_mean, distribution_variance = inputs
       batch_size = backend.shape(distribution_variance)[0]
@@ -241,10 +268,10 @@ class VariationalAutoencoder(Autoencoder):
         with tf.GradientTape() as tape:
             z, z_mean, z_log_var = self.encode(inputs)
             reconstruction = self.decoder(z)
-            reconstruction_loss = tf.reduce_mean(self.loss(outputs, reconstruction), axis=(1, 2))
+            reconstruction_loss = tf.reduce_mean(self.loss(outputs, reconstruction))
             kl_loss = -0.5 * (1 + z_log_var - tf.square(z_mean) - tf.exp(z_log_var))
             kl_loss = tf.reduce_mean(kl_loss)
-            total_loss = reconstruction_loss + kl_loss
+            total_loss = reconstruction_loss * self.reconstruction_loss_factor + kl_loss * self.kl_loss_factor
         grads = tape.gradient(total_loss, self.trainable_weights)
         self.optimizer.apply_gradients(zip(grads, self.trainable_weights))
         self.total_loss_tracker.update_state(total_loss)
@@ -272,3 +299,5 @@ class VariationalAutoencoder(Autoencoder):
     
     def decode(self, latent_inputs):
         return self.decoder(latent_inputs)
+
+

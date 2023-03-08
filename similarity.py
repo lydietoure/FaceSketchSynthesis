@@ -29,6 +29,8 @@ def fid(y_true, y_pred):
     index = fid_metric(img1, img2)
     return float(index)
     
+def lpips(y_true, y_pred):
+    pass
 
 
 PRE_LOADED_MEASURES = {
