@@ -28,7 +28,7 @@ class SSIMLoss(keras.losses.Loss):
         super(SSIMLoss, self).__init__(name='ssim')
 
     def __call__(self, y_e, y_pred, sample_weight=None):
-        loss_ssim = 1 - tf.image.ssim(y_e, y_pred, 1., filter_size=100)
+        loss_ssim = 1 - tf.image.ssim(y_e, y_pred, 1.)
         # loss_ssim = tf.math.reduce_mean(loss_ssim)
         return tf.math.reduce_mean(loss_ssim)
 
