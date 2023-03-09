@@ -158,37 +158,34 @@ class Autoencoder(Model):
         return self.decoder(self.encoder(inputs))
 
 
-
-def get_autoencoder(input_shape, model_name:str = 'autoencoder'):
-    """
-    A simple convolutional autoencoder.
-    """
+def get_autoencoder(input_dim, model_name:str = 'autoencoder'):
     # Inputs
-    input_img = layers.Input(shape=input_shape, name='input_image')
+
+    input_img = layers.Input(shape=input_dim, name='input_image')
 
     # Encoder
     x = convolutionStack(input_img, 32, activation=layers.LeakyReLU(0.2), 
-            kernel_size=3, use_bn=False, strides=2)
+                                    kernel_size=3, use_bn=False, strides=2)
     x = convolutionStack(x, 32, activation=layers.LeakyReLU(0.2), 
-            kernel_size=3, use_bn=False, strides=1)
+                                    kernel_size=3, use_bn=False, strides=1)
     latent_inputs = convolutionStack(x, 16, activation=layers.LeakyReLU(0.2), 
-            kernel_size=3, strides=2)
-    encoder = Model(x, latent_inputs)
+                                    kernel_size=3, strides=2)
+    encoder = Model(input_img, latent_inputs)
+
     latent_inputs_shape = latent_inputs.shape[1:]
 
     # Decoder
     latent_x = layers.Input(shape=latent_inputs_shape)
     x = layers.UpSampling2D(size=2, interpolation='bilinear')(latent_x)
     x = convolutionStack(x, 32, activation=layers.LeakyReLU(0.2), 
-            kernel_size=3, use_bn=False, strides=1)
+                                    kernel_size=3, use_bn=False, strides=1)
     x = convolutionStack(x, 16, activation=layers.LeakyReLU(0.2), 
-            kernel_size=3, use_bn=True, strides=1)
+                                    kernel_size=3, use_bn=True, strides=1)
     x = layers.UpSampling2D(size=2, interpolation='lanczos5')(x)
     x = layers.Conv2D(3, kernel_size=3, strides=1, padding='same', 
-            activation='sigmoid', name='decoded_output')(x)
+                      activation='sigmoid', name='decoded_output')(x)
     decoder = Model(latent_x, x)
-    
-    autoencoder = Autoencoder(encoder, decoder, latent_inputs_shape, name=model_name)
+    autoencoder = Autoencoder(encoder,decoder, latent_dim=latent_inputs_shape, name=model_name)
     return autoencoder
 
 class VariationalAutoencoder(Autoencoder):
@@ -301,3 +298,48 @@ class VariationalAutoencoder(Autoencoder):
         return self.decoder(latent_inputs)
 
 
+def get_variational_autoencoder(input_dim, model_name='vae', reparametrized=False):    
+    encoder = keras.Sequential([
+        layers.Input(input_dim, name='input_image'),
+        layers.Convolution2D(64, 3, strides = 2, padding='same'),
+        layers.BatchNormalization(),
+        layers.LeakyReLU(0.3),
+        layers.Convolution2D(64, 3, strides = 2, padding='same'),
+        layers.BatchNormalization(),
+        layers.LeakyReLU(0.3),
+        layers.Convolution2D(64, 3, strides = 1, padding='same'),
+        layers.Flatten(),    
+    ])
+    # encoder.summary()
+
+    latent_dim = 256
+    if reparametrized:
+        input_img = layers.Input(input_dim, name='input_image')
+        x = encoder(input_img)
+        z_mean = layers.Dense(latent_dim, name='distribution_mean')(x)
+        z_log_var = layers.Dense(latent_dim, name='distribution_var')(x)
+        latent_inputs = Sampling(name='latent_samples')([z_mean, z_log_var])
+        encoder = Model(input_img, [latent_inputs, z_mean, z_log_var])
+
+    decoder = keras.Sequential([
+        layers.Input((latent_dim,), name='latent_code'),
+        layers.Dense(32*32*16),
+        layers.Reshape((16,16,64)),
+        layers.UpSampling2D(2, interpolation='bicubic'),
+        layers.Convolution2D(32, 3, strides = 1, padding='same'),
+        layers.BatchNormalization(),
+        layers.LeakyReLU(0.2),
+        layers.UpSampling2D(2, interpolation='bicubic'),
+        layers.Convolution2D(32, 3, strides = 1, padding='same'),
+        layers.BatchNormalization(),
+        layers.UpSampling2D(2, interpolation='bicubic'),
+        layers.Convolution2D(32, 3, strides = 1, padding='same'),
+        layers.BatchNormalization(),
+        layers.LeakyReLU(0.2),
+        layers.Convolution2D(3, 3, strides=1, padding='same', activation='sigmoid')
+    ])
+    
+
+    return VariationalAutoencoder(
+        encoder, decoder, latent_dim, reparametrized=reparametrized, name=model_name
+    )

@@ -5,6 +5,7 @@ Recover learning models from zip files
 import os
 from zipfile import ZipFile
 from keras.models import load_model
+from keras.preprocessing.image import save_img
 
 # Unzip
 def recover_from_zip(src_dir, target_dir, model_dir):
@@ -27,3 +28,9 @@ def get_available_zipped_models(models_path='./models'):
     models = [ m for m in models if os.path.splitext(m)[1]=='.zip']
 
     return models
+
+
+def save_generated_images(images, target_dir, filenames):
+    for img,fn in zip(images, filenames):
+        fp = os.join.path(target_dir, fn)
+        save_img(fp, img)
