@@ -75,20 +75,34 @@ def load_dataset(directory, target_size, color_mode='rgb', target_range='sigmoid
 
         # Normalise to the appropriate range
         input_arr = rescale_images(input_arr, (0,255.0), target_range)
-        # if target_range == 'tanh':
-        #     input_arr = (input_arr / 255.0 - 0.5) * 2
-        #     input_arr = np.clip(input_arr, -1, 1)
-        # else:
-        #     input_arr = input_arr / 255.0
-
         
         data_array.append(np.asarray(input_arr))
 
     data_array = np.asarray(data_array)
     return data_array
 
-def rescale(ls):
-    return [ (x * 0.5) + 0.5 for x in ls]
+def plot_in_lines(images, target_size, line_max_ct=10, n:int=None, 
+                  rescale_direction=None, nb_channels=3,
+    ):
+    if rescale_direction:
+        source_range, target_range = rescale_direction
+        images = rescale_images(images, source_range, target_range)
+    
+    if not n:
+        n = len(images)
+    
+    nb_cols = (n // line_max_ct)
+    nb_cols = nb_cols if nb_cols*line_max_ct < n else nb_cols+1
+
+    plt.figure(figsize=(nb_cols*n, 4))
+    for i in range(n):
+        # Display original
+        ax = plt.subplot(2, n, i + 1)
+        plt.imshow(images[i].reshape(*target_size, nb_channels))
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+    plt.show()
+
 
 
 def plot_side_by_side(
